@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react"
-import { supabase } from "@/integrations/supabase/client"
+import { apiClient } from "@/api/client"
 import { useAuth } from "@/contexts/auth-context"
 
 export interface NotificationPreferences {
@@ -36,17 +36,17 @@ export function useNotificationPreferences() {
 
   const fetchPreferences = useCallback(async () => {
     if (!user) return
-    const { data } = await supabase
-      .from("notification_preferences")
-      .select("*")
-      .eq("user_id", user.id)
-      .maybeSingle()
-
-    if (data) {
-      const { id, user_id, created_at, updated_at, ...prefs } = data as any
-      setPreferences(prefs as NotificationPreferences)
+    try {
+      const response = await apiClient.get('/notification-preferences/me')
+      if (response.data) {
+        const { id, user_id, created_at, updated_at, ...prefs } = response.data
+        setPreferences(prefs as NotificationPreferences)
+      }
+    } catch (error) {
+      console.error('Failed to fetch notification preferences')
+    } finally {
+      setLoading(false)
     }
-    setLoading(false)
   }, [user])
 
   useEffect(() => {
@@ -60,14 +60,13 @@ export function useNotificationPreferences() {
       setPreferences(updated)
       setSaving(true)
 
-      await supabase
-        .from("notification_preferences")
-        .upsert(
-          { user_id: user.id, ...updated } as any,
-          { onConflict: "user_id" }
-        )
-
-      setSaving(false)
+      try {
+        await apiClient.put('/notification-preferences/me', updated)
+      } catch (error) {
+        console.error('Failed to update preference')
+      } finally {
+        setSaving(false)
+      }
     },
     [user, preferences]
   )

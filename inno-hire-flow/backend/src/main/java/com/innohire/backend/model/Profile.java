@@ -19,6 +19,12 @@ public class Profile {
     @Id
     private String id; // Typically Maps to Auth UUID in Supabase, we keep it as String UUID
 
+    @Column(name = "email", unique = true, nullable = false)
+    private String email;
+
+    @Column(name = "password", nullable = false)
+    private String password;
+
     @Column(name = "full_name", nullable = false)
     private String fullName;
 

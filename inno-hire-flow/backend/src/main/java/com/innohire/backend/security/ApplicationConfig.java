@@ -24,10 +24,10 @@ public class ApplicationConfig {
 
     @Bean
     public UserDetailsService userDetailsService() {
-        return username -> profileRepository.findById(username)
+        return username -> profileRepository.findByEmail(username)
                 .map(profile -> new User(
-                        profile.getId(),
-                        "", // Passwords might not exist if using Supabase Auth, but usually handled by custom logic.
+                        profile.getEmail(),
+                        profile.getPassword(),
                         new ArrayList<>() // Authorities mapping goes here
                 ))
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));

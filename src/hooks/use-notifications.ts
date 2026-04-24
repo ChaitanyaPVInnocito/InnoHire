@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react"
-import { supabase } from "@/integrations/supabase/client"
+import { apiClient } from "@/api/client"
 import { useAuth } from "@/contexts/auth-context"
 
 export interface Notification {
@@ -22,117 +22,90 @@ export function useNotifications() {
 
   const fetchNotifications = useCallback(async () => {
     if (!user) return
-    const { data } = await supabase
-      .from("notifications")
-      .select("*")
-      .eq("user_id", user.id)
-      .order("created_at", { ascending: false })
-      .limit(50)
-
-    if (data) {
-      setNotifications(data as unknown as Notification[])
+    try {
+      const response = await apiClient.get(`/notifications/user/${user.id}`)
+      if (response.data) {
+        setNotifications(response.data as Notification[])
+      }
+    } catch(err) {
+      console.error("Failed to fetch notifications")
+    } finally {
+      setLoading(false)
     }
-    setLoading(false)
   }, [user])
 
   useEffect(() => {
     fetchNotifications()
   }, [fetchNotifications])
 
-  // Realtime subscription
+  // Realtime subscription skipped locally, fall back to polling if needed
   useEffect(() => {
     if (!user) return
 
-    const channel = supabase
-      .channel("notifications-realtime")
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "notifications",
-          filter: `user_id=eq.${user.id}`,
-        },
-        (payload) => {
-          const newNotif = payload.new as unknown as Notification
-          setNotifications(prev => [newNotif, ...prev])
+    const interval = setInterval(() => {
+      fetchNotifications()
+    }, 15000); // 15 seconds polling as temp fix for no websockets
 
-          // Trigger browser notification if permission granted
-          if (Notification.permission === "granted") {
-            new window.Notification(newNotif.title, {
-              body: newNotif.body,
-              icon: "/favicon.ico",
-            })
-          }
-        }
-      )
-      .subscribe()
-
-    return () => {
-      supabase.removeChannel(channel)
-    }
-  }, [user])
+    return () => clearInterval(interval)
+  }, [user, fetchNotifications])
 
   const markAsRead = useCallback(async (id: string) => {
-    await supabase
-      .from("notifications")
-      .update({ read: true })
-      .eq("id", id)
-
-    setNotifications(prev =>
-      prev.map(n => (n.id === id ? { ...n, read: true } : n))
-    )
+    try {
+      await apiClient.put(`/notifications/${id}/read`)
+      setNotifications(prev =>
+        prev.map(n => (n.id === id ? { ...n, read: true } : n))
+      )
+    } catch(err) {
+      console.error(err)
+    }
   }, [])
 
   const markAllAsRead = useCallback(async () => {
     if (!user) return
-    await supabase
-      .from("notifications")
-      .update({ read: true })
-      .eq("user_id", user.id)
-      .eq("read", false)
-
-    setNotifications(prev => prev.map(n => ({ ...n, read: true })))
+    try {
+      await apiClient.put(`/notifications/user/${user.id}/read-all`)
+      setNotifications(prev => prev.map(n => ({ ...n, read: true })))
+    } catch(err) {
+      console.error(err)
+    }
   }, [user])
 
   const clearAll = useCallback(async () => {
     if (!user) return
-    await supabase
-      .from("notifications")
-      .delete()
-      .eq("user_id", user.id)
-
-    setNotifications([])
+    try {
+      await apiClient.delete(`/notifications/user/${user.id}`)
+      setNotifications([])
+    } catch(err) {
+      console.error(err);
+    }
   }, [user])
 
   const dismissNotification = useCallback(async (id: string) => {
-    await supabase
-      .from("notifications")
-      .delete()
-      .eq("id", id)
-
-    setNotifications(prev => prev.filter(n => n.id !== id))
+    try {
+      await apiClient.delete(`/notifications/${id}`)
+      setNotifications(prev => prev.filter(n => n.id !== id))
+    } catch(err) {
+      console.error(err);
+    }
   }, [])
 
   const requestPushPermission = useCallback(async () => {
     if (!("Notification" in window)) return "unsupported"
     const permission = await window.Notification.requestPermission()
     if (permission === "granted" && user) {
-      // Store subscription info if available
       if ("serviceWorker" in navigator) {
         try {
           const registration = await navigator.serviceWorker.ready
           const subscription = await registration.pushManager.subscribe({
             userVisibleOnly: true,
-            applicationServerKey: undefined, // VAPID key would go here for full push
+            applicationServerKey: undefined,
           })
-          // Save push subscription
           const sub = subscription.toJSON()
-          await supabase.from("push_subscriptions").upsert({
-            user_id: user.id,
+          await apiClient.post('/push-subscriptions', {
+            userId: user.id,
             endpoint: sub.endpoint!,
-            keys: sub.keys as any,
-          }, { onConflict: "user_id,endpoint" })
+            keys: sub.keys
+          })
         } catch (e) {
           console.log("Push subscription not available:", e)
         }
