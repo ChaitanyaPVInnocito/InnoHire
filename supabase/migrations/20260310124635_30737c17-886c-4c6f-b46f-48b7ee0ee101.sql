@@ -1,0 +1,1 @@
+ALTER TABLE public.invitations ADD COLUMN secondary_role public.app_role DEFAULT NULL;

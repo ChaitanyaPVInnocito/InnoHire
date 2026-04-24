@@ -1,0 +1,588 @@
+export type Json =
+  | string
+  | number
+  | boolean
+  | null
+  | { [key: string]: Json | undefined }
+  | Json[]
+
+export type Database = {
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
+  __InternalSupabase: {
+    PostgrestVersion: "14.4"
+  }
+  public: {
+    Tables: {
+      audit_logs: {
+        Row: {
+          action: string
+          changed_at: string
+          changed_by_name: string
+          changed_by_role: string
+          id: string
+          metadata: Json | null
+          new_status: string
+          notes: string | null
+          previous_status: string | null
+          requisition_id: string
+        }
+        Insert: {
+          action: string
+          changed_at?: string
+          changed_by_name: string
+          changed_by_role: string
+          id: string
+          metadata?: Json | null
+          new_status: string
+          notes?: string | null
+          previous_status?: string | null
+          requisition_id: string
+        }
+        Update: {
+          action?: string
+          changed_at?: string
+          changed_by_name?: string
+          changed_by_role?: string
+          id?: string
+          metadata?: Json | null
+          new_status?: string
+          notes?: string | null
+          previous_status?: string | null
+          requisition_id?: string
+        }
+        Relationships: []
+      }
+      invitations: {
+        Row: {
+          created_at: string
+          email: string
+          full_name: string
+          id: string
+          invited_by: string | null
+          role: Database["public"]["Enums"]["app_role"]
+          secondary_role: Database["public"]["Enums"]["app_role"] | null
+          token: string
+          used: boolean
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          full_name: string
+          id?: string
+          invited_by?: string | null
+          role: Database["public"]["Enums"]["app_role"]
+          secondary_role?: Database["public"]["Enums"]["app_role"] | null
+          token?: string
+          used?: boolean
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          full_name?: string
+          id?: string
+          invited_by?: string | null
+          role?: Database["public"]["Enums"]["app_role"]
+          secondary_role?: Database["public"]["Enums"]["app_role"] | null
+          token?: string
+          used?: boolean
+        }
+        Relationships: []
+      }
+      notification_preferences: {
+        Row: {
+          browser_enabled: boolean
+          created_at: string
+          email_enabled: boolean
+          id: string
+          offer_approved: boolean
+          offer_rejected: boolean
+          offer_routed: boolean
+          re_initiation: boolean
+          requisition_approved: boolean
+          requisition_rejected: boolean
+          requisition_submitted: boolean
+          requisition_update: boolean
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          browser_enabled?: boolean
+          created_at?: string
+          email_enabled?: boolean
+          id?: string
+          offer_approved?: boolean
+          offer_rejected?: boolean
+          offer_routed?: boolean
+          re_initiation?: boolean
+          requisition_approved?: boolean
+          requisition_rejected?: boolean
+          requisition_submitted?: boolean
+          requisition_update?: boolean
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          browser_enabled?: boolean
+          created_at?: string
+          email_enabled?: boolean
+          id?: string
+          offer_approved?: boolean
+          offer_rejected?: boolean
+          offer_routed?: boolean
+          re_initiation?: boolean
+          requisition_approved?: boolean
+          requisition_rejected?: boolean
+          requisition_submitted?: boolean
+          requisition_update?: boolean
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      notifications: {
+        Row: {
+          body: string
+          created_at: string
+          id: string
+          metadata: Json | null
+          read: boolean
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          read?: boolean
+          title: string
+          type?: string
+          user_id: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          read?: boolean
+          title?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      offers: {
+        Row: {
+          backed_out_at: string | null
+          backed_out_reason: string | null
+          candidate_name: string
+          created_at: string
+          id: string
+          joined_date: string | null
+          joining_date: string | null
+          joining_date_history: Json | null
+          project: string
+          proposed_salary: string
+          requested_by: string
+          requested_date: string
+          requisition_id: string
+          role: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          backed_out_at?: string | null
+          backed_out_reason?: string | null
+          candidate_name: string
+          created_at?: string
+          id: string
+          joined_date?: string | null
+          joining_date?: string | null
+          joining_date_history?: Json | null
+          project: string
+          proposed_salary: string
+          requested_by: string
+          requested_date: string
+          requisition_id: string
+          role: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          backed_out_at?: string | null
+          backed_out_reason?: string | null
+          candidate_name?: string
+          created_at?: string
+          id?: string
+          joined_date?: string | null
+          joining_date?: string | null
+          joining_date_history?: Json | null
+          project?: string
+          proposed_salary?: string
+          requested_by?: string
+          requested_date?: string
+          requisition_id?: string
+          role?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "offers_requisition_id_fkey"
+            columns: ["requisition_id"]
+            isOneToOne: false
+            referencedRelation: "requisitions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          default_experience_range: string
+          default_job_location: string
+          department: string | null
+          full_name: string
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          default_experience_range?: string
+          default_job_location?: string
+          department?: string | null
+          full_name: string
+          id: string
+          updated_at?: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          default_experience_range?: string
+          default_job_location?: string
+          department?: string | null
+          full_name?: string
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      project_codes: {
+        Row: {
+          code: string
+          created_at: string
+          created_by: string | null
+          id: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+        }
+        Relationships: []
+      }
+      push_subscriptions: {
+        Row: {
+          created_at: string
+          endpoint: string
+          id: string
+          keys: Json
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          endpoint: string
+          id?: string
+          keys: Json
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          endpoint?: string
+          id?: string
+          keys?: Json
+          user_id?: string
+        }
+        Relationships: []
+      }
+      re_initiation_requests: {
+        Row: {
+          backed_out_reason: string
+          created_at: string
+          hm_approval: Json | null
+          id: string
+          lob_approval: Json | null
+          original_candidate_name: string
+          project: string
+          requested_by: string
+          requested_by_user_id: string | null
+          requested_date: string
+          requisition_id: string
+          role: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          backed_out_reason: string
+          created_at?: string
+          hm_approval?: Json | null
+          id?: string
+          lob_approval?: Json | null
+          original_candidate_name: string
+          project: string
+          requested_by: string
+          requested_by_user_id?: string | null
+          requested_date?: string
+          requisition_id: string
+          role: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          backed_out_reason?: string
+          created_at?: string
+          hm_approval?: Json | null
+          id?: string
+          lob_approval?: Json | null
+          original_candidate_name?: string
+          project?: string
+          requested_by?: string
+          requested_by_user_id?: string | null
+          requested_date?: string
+          requisition_id?: string
+          role?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      requisitions: {
+        Row: {
+          candidates: Json | null
+          created_at: string
+          created_by: string | null
+          created_date: string
+          id: string
+          interview_state: Json | null
+          level: string
+          lob: string
+          manager: string
+          project: string
+          role: string
+          salary: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          candidates?: Json | null
+          created_at?: string
+          created_by?: string | null
+          created_date?: string
+          id: string
+          interview_state?: Json | null
+          level: string
+          lob: string
+          manager: string
+          project: string
+          role: string
+          salary?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          candidates?: Json | null
+          created_at?: string
+          created_by?: string | null
+          created_date?: string
+          id?: string
+          interview_state?: Json | null
+          level?: string
+          lob?: string
+          manager?: string
+          project?: string
+          role?: string
+          salary?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      get_user_role: {
+        Args: { _user_id: string }
+        Returns: Database["public"]["Enums"]["app_role"]
+      }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
+    }
+    Enums: {
+      app_role: "hiring-manager" | "lob-head" | "tag-manager"
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
+}
+
+type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
+
+type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
+
+export type Tables<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
+      Row: infer R
+    }
+    ? R
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])
+    ? (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
+        Row: infer R
+      }
+      ? R
+      : never
+    : never
+
+export type TablesInsert<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+      Insert: infer I
+    }
+    ? I
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+        Insert: infer I
+      }
+      ? I
+      : never
+    : never
+
+export type TablesUpdate<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+      Update: infer U
+    }
+    ? U
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+        Update: infer U
+      }
+      ? U
+      : never
+    : never
+
+export type Enums<
+  DefaultSchemaEnumNameOrOptions extends
+    | keyof DefaultSchema["Enums"]
+    | { schema: keyof DatabaseWithoutInternals },
+  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
+    : never = never,
+> = DefaultSchemaEnumNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
+  : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
+    ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
+    : never
+
+export type CompositeTypes<
+  PublicCompositeTypeNameOrOptions extends
+    | keyof DefaultSchema["CompositeTypes"]
+    | { schema: keyof DatabaseWithoutInternals },
+  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
+    : never = never,
+> = PublicCompositeTypeNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
+  : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
+    ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
+    : never
+
+export const Constants = {
+  public: {
+    Enums: {
+      app_role: ["hiring-manager", "lob-head", "tag-manager"],
+    },
+  },
+} as const

@@ -1,0 +1,1 @@
+UPDATE public.profiles SET full_name = 'Super Admin' WHERE id = '66f7d4b9-7d17-4581-a497-eef2fcba402c';
