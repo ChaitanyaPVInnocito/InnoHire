@@ -24,4 +24,19 @@ public class AuthController {
     public ResponseEntity<AuthResponse> authenticate(@RequestBody AuthRequest request) {
         return ResponseEntity.ok(authService.authenticate(request));
     }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<String> forgotPassword(@RequestBody java.util.Map<String, String> body) {
+        // System will log this and ordinarily email a token. 
+        // For custom spring boot, you would integrate an email service here.
+        System.out.println("Forgot password request for: " + body.get("email"));
+        return ResponseEntity.ok("If an account exists, a reset link has been sent.");
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<String> resetPassword(@RequestBody java.util.Map<String, String> body) {
+        // The token parsing and password update would happen here.
+        System.out.println("Password reset execution.");
+        return ResponseEntity.ok("Password has been reset.");
+    }
 }

@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react"
+import { apiClient } from "@/api/client"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -7,18 +8,17 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Badge } from "@/components/ui/badge"
 import { UserPlus, Trash2, Users, Mail, Loader2, Copy, Check } from "lucide-react"
 import { toast } from "@/hooks/use-toast"
-import { supabase } from "@/integrations/supabase/client"
 import type { AppRole } from "@/contexts/auth-context"
 
 interface Invitation {
   id: string
   email: string
-  full_name: string
+  fullName: string
   role: AppRole
-  secondary_role: AppRole | null
+  secondaryRole: AppRole | null
   token: string
   used: boolean
-  created_at: string
+  createdAt: string
 }
 
 const roleLabels: Record<string, string> = {
@@ -38,17 +38,14 @@ export function UserAccessManagement() {
   const [copiedId, setCopiedId] = useState<string | null>(null)
 
   const fetchInvitations = async () => {
-    const { data, error } = await supabase
-      .from('invitations')
-      .select('*')
-      .order('created_at', { ascending: false })
-
-    if (error) {
-      console.error('Failed to fetch invitations:', error)
-    } else {
-      setInvitations((data || []) as unknown as Invitation[])
+    try {
+      const response = await apiClient.get('/invitations')
+      setInvitations(response.data || [])
+    } catch(err) {
+      console.error('Failed to fetch invitations:', err)
+    } finally {
+      setLoading(false)
     }
-    setLoading(false)
   }
 
   useEffect(() => {
@@ -90,68 +87,55 @@ export function UserAccessManagement() {
     const primaryRole = rolesArray[0]
     const secondaryRole = rolesArray.length > 1 ? rolesArray[1] : null
 
+    const tokenPayload = Math.random().toString(36).substring(2, 15)
+
     const insertData: any = {
       email: newEmail.trim(),
-      full_name: newName.trim(),
+      fullName: newName.trim(),
       role: primaryRole,
+      token: tokenPayload,
+      used: false
     }
     if (secondaryRole) {
-      insertData.secondary_role = secondaryRole
+      insertData.secondaryRole = secondaryRole
     }
-
-    const { data, error } = await supabase
-      .from('invitations')
-      .insert(insertData)
-      .select()
-      .single()
-
-    if (error) {
-      toast({ title: "Failed to create invitation", description: error.message, variant: "destructive" })
-      setSubmitting(false)
-      return
-    }
-
-    const invitation = data as unknown as Invitation
 
     try {
-      await supabase.functions.invoke('send-invite', {
-        body: {
-          email: invitation.email,
-          fullName: invitation.full_name,
-          role: invitation.role,
-          secondaryRole: invitation.secondary_role,
-          token: invitation.token,
-        },
+      const response = await apiClient.post('/invitations', insertData)
+      const invitation = response.data
+
+      setInvitations([invitation, ...invitations])
+      setNewName('')
+      setNewEmail('')
+      setSelectedRoles(new Set())
+      
+      const roleNames = rolesArray.map(r => roleLabels[r]).join(' & ')
+      toast({ title: "Invitation sent", description: `${newName.trim()} has been invited as ${roleNames}.` })
+      
+      // Attempt sending email mock
+      await apiClient.post('/notifications/email', {
+        type: 'invite',
+        recipientEmail: invitation.email,
+        recipientName: invitation.fullName,
+        role: invitation.role
       })
-    } catch (e) {
-      console.error('Failed to send invite email:', e)
+    } catch(err: any) {
+      toast({ title: "Failed to create invitation", description: err.message, variant: "destructive" })
+    } finally {
+      setSubmitting(false)
     }
-
-    setInvitations([invitation, ...invitations])
-    setNewName('')
-    setNewEmail('')
-    setSelectedRoles(new Set())
-    setSubmitting(false)
-
-    const roleNames = rolesArray.map(r => roleLabels[r]).join(' & ')
-    toast({ title: "Invitation sent", description: `${newName.trim()} has been invited as ${roleNames}.` })
   }
 
   const handleRemoveInvitation = async (id: string) => {
     const invitation = invitations.find(i => i.id === id)
-    const { error } = await supabase
-      .from('invitations')
-      .delete()
-      .eq('id', id)
-
-    if (error) {
-      toast({ title: "Failed to remove", description: error.message, variant: "destructive" })
-      return
-    }
-
-    setInvitations(invitations.filter(i => i.id !== id))
-    if (invitation) {
-      toast({ title: "Invitation revoked", description: `${invitation.full_name}'s invitation has been removed.` })
+    try {
+      await apiClient.delete(`/invitations/${id}`)
+      setInvitations(invitations.filter(i => i.id !== id))
+      if (invitation) {
+        toast({ title: "Invitation revoked", description: `${invitation.fullName || 'User'}'s invitation has been removed.` })
+      }
+    } catch(err: any) {
+      toast({ title: "Failed to remove", description: err.message, variant: "destructive" })
     }
   }
 
@@ -165,7 +149,7 @@ export function UserAccessManagement() {
 
   const getRoleBadges = (inv: Invitation) => {
     const roles: string[] = [roleLabels[inv.role]]
-    if (inv.secondary_role) roles.push(roleLabels[inv.secondary_role])
+    if (inv.secondaryRole) roles.push(roleLabels[inv.secondaryRole])
     return roles
   }
 
@@ -233,7 +217,7 @@ export function UserAccessManagement() {
               {invitations.map(inv => (
                 <div key={inv.id} className="flex items-center justify-between p-3 border rounded-lg">
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium text-sm truncate">{inv.full_name}</p>
+                    <p className="font-medium text-sm truncate">{inv.fullName}</p>
                     <p className="text-xs text-muted-foreground truncate">{inv.email}</p>
                   </div>
                   <div className="flex items-center gap-2 ml-4">

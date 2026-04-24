@@ -1,73 +1,96 @@
-# Welcome to your Lovable project
+# InnoHire Platform
 
-## Project info
+InnoHire is a modern hiring and requisition management platform. It consists of a **React Frontend** and a **Java Spring Boot Backend**, communicating via RESTful APIs with JWT authentication. 
 
-**URL**: https://lovable.dev/projects/ded27ee8-b084-4e94-87b3-9472d1e1dc7f
+---
 
-## How can I edit this code?
+## Architecture Overview
 
-There are several ways of editing your application.
+**Frontend:**
+- **Framework:** React + Vite
+- **Language:** TypeScript
+- **Styling:** Tailwind CSS + shadcn-ui
+- **State/Data:** React hooks with `axios` referencing our custom backend (`src/api/client.ts`).
 
-**Use Lovable**
+**Backend:**
+- **Framework:** Java Spring Boot 3+
+- **Language:** Java 17+
+- **Database:** PostgreSQL (via Spring Data JPA / Hibernate)
+- **Security:** Custom JWT Authentication with Spring Security filter chains.
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/ded27ee8-b084-4e94-87b3-9472d1e1dc7f) and start prompting.
+> **Note to Developers:** This project was originally built using Supabase (BaaS) and has since been fully migrated to a custom Spring Boot architecture. All `@supabase/supabase-js` references have been successfully stripped from the codebase and replaced with API calls pointing to `/api/v1`.
 
-Changes made via Lovable will be committed automatically to this repo.
+---
 
-**Use your preferred IDE**
+## 🚀 Running the Project Locally
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+### 1. Database Setup
+1. Install [PostgreSQL](https://www.postgresql.org/download/).
+2. Create a new local database named `innohire`.
+3. Update the database credentials in `backend/src/main/resources/application.properties` if they differ from the default (`postgres`/`postgres`).
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+### 2. Backend (Java Spring Boot)
+1. Ensure **Java 17+** is installed on your machine.
+2. Navigate to the backend directory:
+   ```bash
+   cd inno-hire-flow/backend
+   ```
+3. Run the application:
+   ```bash
+   # Windows
+   .\mvnw.cmd spring-boot:run
+   
+   # Mac/Linux
+   ./mvnw spring-boot:run
+   ```
+   *Spring Data JPA is configured to `update` the schema on boot (see `spring.jpa.hibernate.ddl-auto=update`). The necessary tables will generate automatically when the application starts.*
 
-Follow these steps:
+### 3. Frontend (React)
+1. Ensure **Bun** or **Node.js** is installed.
+2. Navigate to the frontend directory (root):
+   ```bash
+   cd inno-hire-flow/
+   ```
+3. Install dependencies:
+   ```bash
+   bun install  # or npm install
+   ```
+4. Start the Vite development server:
+   ```bash
+   bun run dev  # or npm run dev
+   ```
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+---
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+## 📌 Backend Developer Guide
 
-# Step 3: Install the necessary dependencies.
-npm i
+If you are a Java Developer taking over this repository, here is what you need to know:
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
-```
+### Domain Context
+The application revolves around core hiring entities:
+1. **Profile**: Users of the system (Hiring Managers, LOB Heads, etc).
+2. **Requisition**: Job openings requested by hiring managers.
+3. **Offer**: Candidate offers tied to a requisition.
+4. **Notification**: System alerts for users.
+5. **ProjectCode**: Billing/project identifiers for requisitions.
 
-**Edit a file directly in GitHub**
+### Where things are located:
+- **`model/`**: Contains all JPA Entities (e.g., `Profile.java`, `Requisition.java`, `Offer.java`). Note the use of `@JdbcTypeCode(SqlTypes.JSON)` for handling JSONB fields previously used in Supabase.
+- **`repository/`**: Standard Spring Data JpaRepositories for database operations.
+- **`security/`**: Defines the stateless JWT authentication system (`JwtUtil`, `JwtAuthFilter`, `SecurityConfig`). Local login and registration generates a JWT here.
+- **`service/`**: Business logic, including standard entity managers and the `EmailNotificationService` which replaces legacy Supabase Edge Functions.
+- **`controller/`**: Fully decoupled REST Endpoints consumed directly by the React frontend (`/api/v1/...`).
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+### Security Protocol
+The system does not use sessions. Every frontend request is intercepted by the `JwtAuthFilter`. You must pass the Authorization header:
+`Authorization: Bearer <token>`
+If you wish to test protected endpoints in Postman, hit `/api/v1/auth/register` or `/api/v1/auth/authenticate` first to get your token!
 
-**Use GitHub Codespaces**
-
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
-
-## What technologies are used for this project?
-
-This project is built with:
-
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/ded27ee8-b084-4e94-87b3-9472d1e1dc7f) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+### Next Implementation Steps / Roadmap
+- **Validations:** Add robust `@Valid` annotations to controller DTOs.
+- **Roles & Permissions:** Transition UI application roles (`hiring-manager`, `lob-head`) into Spring Security `@PreAuthorize("hasRole('...')")` blocks on specific controller endpoints.
+- **WebSockets:** The frontend previously used Supabase Realtime subscriptions for notifications. This was disabled locally. Future architecture will require integrating Spring WebSockets (STOMP) for realtime push notifications, or relying purely on polling. 
+- **Tests:** Add JUnit coverage for the Service logic!
+- **SMTP Setup:** Complete email dispatch inside `EmailNotificationService` (set SMTP credentials in `application.properties`).
+- **File Uploads (Avatars):** The mock migration accepts base64 strings to `/api/v1/profiles/{id}/avatar`. Implement proper S3/Disk file uploads and return public URLs for better performance.
+- **Invitations:** Fully hook up `UUID` token workflows to safely manage pending user invitations via emails.

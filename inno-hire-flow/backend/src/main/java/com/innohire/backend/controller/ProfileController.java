@@ -29,4 +29,13 @@ public class ProfileController {
     public ResponseEntity<Profile> updateProfile(@PathVariable String id, @RequestBody Profile profile) {
         return ResponseEntity.ok(profileService.updateProfile(id, profile));
     }
+
+    @PutMapping("/{id}/avatar")
+    public ResponseEntity<Profile> updateAvatar(@PathVariable String id, @RequestBody java.util.Map<String, String> body) {
+        Profile profile = profileService.getProfileById(id);
+        profile.setAvatarUrl(body.get("avatar_url"));
+        // We bypass service logic here for direct repository save in this fast mock migration 
+        // but normally this would be in ProfileService.updateAvatar()
+        return ResponseEntity.ok(profileService.updateProfile(id, profile));
+    }
 }

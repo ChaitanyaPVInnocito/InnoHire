@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react"
-import { supabase } from "@/integrations/supabase/client"
+import { apiClient } from "@/api/client"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -45,31 +45,22 @@ export function Settings({ userRole }: SettingsProps) {
   useEffect(() => {
     async function loadProfile() {
       if (!user) return
-      const { data } = await supabase
-        .from('profiles')
-        .select('full_name, department, default_job_location, default_experience_range')
-        .eq('id', user.id)
-        .maybeSingle()
+      try {
+        const { data: profileRow } = await apiClient.get(`/profiles/${user.id}`)
 
-      const profileRow = data as {
-        full_name?: string | null
-        department?: string | null
-        default_job_location?: string | null
-        default_experience_range?: string | null
-      } | null
-
-      if (profileRow) {
-        setProfile(prev => ({
-          ...prev,
-          name: profileRow.full_name || '',
-          department: profileRow.department || '',
-          email: user.email || '',
-        }))
-        setRequisitionPreferences({
-          defaultJobLocation: profileRow.default_job_location || 'bangalore',
-          defaultExperienceRange: profileRow.default_experience_range || '3-5',
-        })
-      } else {
+        if (profileRow) {
+          setProfile(prev => ({
+            ...prev,
+            name: profileRow.fullName || profileRow.full_name || '',
+            department: profileRow.department || '',
+            email: user.email || '',
+          }))
+          setRequisitionPreferences({
+            defaultJobLocation: profileRow.defaultJobLocation || profileRow.default_job_location || 'bangalore',
+            defaultExperienceRange: profileRow.defaultExperienceRange || profileRow.default_experience_range || '3-5',
+          })
+        }
+      } catch (err) {
         setProfile(prev => ({ ...prev, email: user.email || '' }))
       }
     }
@@ -88,23 +79,20 @@ export function Settings({ userRole }: SettingsProps) {
 
     setRequisitionPrefsSaving(true)
     const dbUpdates = key === 'defaultJobLocation'
-      ? { default_job_location: value }
-      : { default_experience_range: value }
+      ? { defaultJobLocation: value }
+      : { defaultExperienceRange: value }
 
-    const { error } = await supabase
-      .from('profiles')
-      .update(dbUpdates as any)
-      .eq('id', user.id)
-
-    setRequisitionPrefsSaving(false)
-
-    if (error) {
+    try {
+      await apiClient.put(`/profiles/${user.id}`, dbUpdates)
+    } catch(err) {
       setRequisitionPreferences(previous)
       toast({
         title: 'Error',
         description: 'Failed to save requisition preferences.',
         variant: 'destructive'
       })
+    } finally {
+      setRequisitionPrefsSaving(false)
     }
   }
 
@@ -333,20 +321,22 @@ export function Settings({ userRole }: SettingsProps) {
                     toast({ title: "File too large", description: "Please choose an image under 2MB.", variant: "destructive" })
                     return
                   }
-                  const ext = file.name.split('.').pop()
-                  const filePath = `${user.id}/avatar.${ext}`
-                  const { error: uploadError } = await supabase.storage
-                    .from('avatars')
-                    .upload(filePath, file, { upsert: true })
-                  if (uploadError) {
-                    toast({ title: "Upload failed", description: uploadError.message, variant: "destructive" })
-                    return
-                  }
-                  const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(filePath)
-                  const publicUrl = `${urlData.publicUrl}?t=${Date.now()}`
-                  await supabase.from('profiles').update({ avatar_url: publicUrl }).eq('id', user.id)
-                  refreshProfile()
-                  toast({ title: "Updated", description: "Profile picture updated." })
+                  
+                  const reader = new FileReader();
+                  reader.readAsDataURL(file);
+                  reader.onload = async () => {
+                     const base64String = reader.result as string;
+                     try {
+                        await apiClient.put(`/profiles/${user.id}/avatar`, { avatar_url: base64String })
+                        refreshProfile()
+                        toast({ title: "Updated", description: "Profile picture updated." })
+                     } catch(err: any) {
+                        toast({ title: "Upload failed", description: err.message, variant: "destructive" })
+                     }
+                  };
+                  reader.onerror = (error) => {
+                     toast({ title: "Upload failed", description: "Failed reading file.", variant: "destructive" })
+                  };
                 }}
               />
             </div>
@@ -402,15 +392,15 @@ export function Settings({ userRole }: SettingsProps) {
           </div>
           <Button onClick={async () => {
             if (!user) return
-            const { error } = await supabase.from('profiles').update({
-              full_name: profile.name,
-              department: profile.department,
-            }).eq('id', user.id)
-            if (error) {
-              toast({ title: "Error", description: "Failed to save profile.", variant: "destructive" })
-            } else {
+            try {
+              await apiClient.put(`/profiles/${user.id}`, {
+                fullName: profile.name,
+                department: profile.department,
+              })
               refreshProfile()
               toast({ title: "Saved", description: "Profile updated successfully." })
+            } catch(err) {
+              toast({ title: "Error", description: "Failed to save profile.", variant: "destructive" })
             }
           }}>Save Changes</Button>
         </CardContent>

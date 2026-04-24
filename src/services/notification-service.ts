@@ -1,4 +1,4 @@
-import { supabase } from "@/integrations/supabase/client"
+import { apiClient } from "@/api/client"
 
 export type NotificationType = 
   | 'requisition_submitted'
@@ -28,15 +28,8 @@ interface NotificationData {
 
 export async function sendNotificationEmail(data: NotificationData): Promise<boolean> {
   try {
-    const { error } = await supabase.functions.invoke('send-notification-email', {
-      body: data,
-    })
-
-    if (error) {
-      console.error('Failed to send notification email:', error)
-      return false
-    }
-
+    // In spring boot backend, the Notification service should expose an email endpoint
+    await apiClient.post('/notifications/email', data)
     return true
   } catch (error) {
     console.error('Failed to send email notification:', error)

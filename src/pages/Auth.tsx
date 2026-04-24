@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
+import { apiClient } from '@/api/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -46,22 +46,23 @@ export default function Auth() {
     if (!inviteToken) return;
 
     const fetchInvitation = async () => {
-      const { data, error } = await supabase.
-      from('invitations').
-      select('*').
-      eq('token', inviteToken).
-      eq('used', false).
-      single();
+      try {
+        const response = await apiClient.get('/invitations')
+        // Mock filtering local side based on standard Invitation array
+        const inv = response.data.find((i: any) => i.token === inviteToken)
 
-      if (error || !data) {
-        setInviteError('This invitation link is invalid or has already been used.');
-      } else {
-        const inv = data as unknown as InvitationData;
-        setInvitation(inv);
+        if (!inv) {
+          throw new Error("Invalid")
+        }
+        
+        setInvitation(inv as InvitationData);
         setEmail(inv.email);
-        setFullName(inv.full_name);
+        setFullName(inv.fullName || inv.full_name); // accommodate potential camelcase mismatch
+      } catch (error) {
+        setInviteError('This invitation link is invalid or has already been used.');
+      } finally {
+        setInviteLoading(false);
       }
-      setInviteLoading(false);
     };
 
     fetchInvitation();
@@ -82,7 +83,6 @@ export default function Auth() {
     if (!invitation) return;
     setSubmitting(true);
 
-    // Collect all roles from invitation
     const roles: AppRole[] = [invitation.role];
     if (invitation.secondary_role) {
       roles.push(invitation.secondary_role);
@@ -95,17 +95,16 @@ export default function Auth() {
       return;
     }
 
-    // Mark invitation as used
-    await supabase.
-    from('invitations').
-    update({ used: true }).
-    eq('id', invitation.id);
-
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
-      toast({ title: 'Check your email', description: 'We sent you a verification link. Please verify your email before signing in.' });
+    // Delete invitation as it is used
+    try {
+       await apiClient.delete(`/invitations/${invitation.id}`)
+    } catch (err) {
+       console.error("Failed deleting used invite")
     }
+    
     setSubmitting(false);
+    // Since sign up success fully logs in via auth-context locally, it will redirect automatically 
+    // or trigger App.tsx to remount
   };
 
   const getInvitationRoleLabels = () => {
@@ -121,7 +120,6 @@ export default function Auth() {
         <div className="min-h-screen bg-background flex items-center justify-center p-4">
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
         </div>);
-
     }
 
     if (inviteError) {
@@ -140,7 +138,6 @@ export default function Auth() {
             </CardContent>
           </Card>
         </div>);
-
     }
 
     const roleLabelsArray = getInvitationRoleLabels();
@@ -214,7 +211,6 @@ export default function Auth() {
           </CardContent>
         </Card>
       </div>);
-
   }
 
   return (
@@ -269,5 +265,4 @@ export default function Auth() {
         </CardContent>
       </Card>
     </div>);
-
 }
